@@ -47,8 +47,31 @@ describe("training", () => {
     const action = weeklyActionsFor("RB").find(
       (a) => a.id === "position-training",
     )!;
-    const proj = projectAction(action);
+    const proj = projectAction(action, defaultResources());
     expect(proj.projectedEffects.energy).toBeLessThan(0);
+  });
+
+  it("injury-risk label reflects current fatigue/health, not just load", () => {
+    const action = weeklyActionsFor("QB").find((a) => a.id === "film-study")!;
+    const rested = projectAction(
+      action,
+      defaultResources({ fatigue: 0, health: 100, injuryRisk: 5 }),
+    );
+    const gassed = projectAction(
+      action,
+      defaultResources({ fatigue: 95, health: 40, injuryRisk: 60 }),
+    );
+    expect(rested.injuryChanceLabel).toBe("Low");
+    expect(gassed.injuryChanceLabel).toBe("Elevated");
+  });
+
+  it("zero-load actions always show no injury risk regardless of resources", () => {
+    const action = weeklyActionsFor("QB").find((a) => a.id === "rest")!;
+    const proj = projectAction(
+      action,
+      defaultResources({ fatigue: 100, health: 0, injuryRisk: 100 }),
+    );
+    expect(proj.injuryChanceLabel).toBe("None");
   });
 
   it("training raises the trained attributes", () => {

@@ -15,7 +15,7 @@ import {
   POSITION_ATTRIBUTES,
 } from "./types";
 import { applyGrowth, developmentMultiplier } from "./progression";
-import { rollInjury } from "./injuries";
+import { rollInjury, injuryProbability } from "./injuries";
 import { applyDelta } from "./energy";
 import type { Rng } from "./random";
 
@@ -226,21 +226,31 @@ export function weeklyActionsFor(position: Position): WeeklyAction[] {
   ];
 }
 
-/** Project an action's effects for the confirmation preview. */
-export function projectAction(action: WeeklyAction): ActionProjection {
+/**
+ * Project an action's effects for the confirmation preview. The injury-risk
+ * label reflects the athlete's *current* resources (fatigue, health,
+ * standing injury risk), not just the action's static load — a "low load"
+ * action can still carry real risk once fatigue/health have degraded, and
+ * the preview should say so instead of always reading the action's baseline.
+ */
+export function projectAction(
+  action: WeeklyAction,
+  resources: Resources,
+): ActionProjection {
   const effects: ResourceDelta = {
     ...action.baseEffects,
     energy: (action.baseEffects.energy ?? 0) - action.energyCost,
   };
   const hasUncertainty = action.load > 0 || !!action.attributeGains;
   const injuryChanceLabel =
-    action.load >= 55
-      ? "Elevated"
-      : action.load >= 30
-        ? "Moderate"
-        : action.load > 0
-          ? "Low"
-          : "None";
+    action.load === 0
+      ? "None"
+      : (() => {
+          const p = injuryProbability(resources, action.load);
+          if (p >= 0.5) return "Elevated";
+          if (p >= 0.25) return "Moderate";
+          return "Low";
+        })();
   return {
     action,
     projectedEffects: effects,

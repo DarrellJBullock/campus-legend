@@ -85,7 +85,7 @@ export default function TrainingCenterPage() {
           {trainingActions.map((action) => {
             const used = career.actionsThisWeek.includes(action.id);
             const disabled = used || career.actionPoints <= 0;
-            const projection = projectAction(action);
+            const projection = projectAction(action, career.resources);
             const isOpen = expanded === action.id;
             return (
               <Card key={action.id} className={cn(used && "opacity-60")}>
