@@ -152,6 +152,7 @@ export function createCareer(opts: NewCareerOptions): CareerState {
     depthChart: initialDepthChart(overall, rng),
     relationships: defaultRelationships((n) => rng.int(0, n - 1)),
     academics: initialAcademics(input),
+    activeInjury: null,
     season: initialSeasonState(1, schedule),
     weekOfSeason: 1,
     actionPoints: ACTION_POINTS_PER_WEEK,

@@ -470,6 +470,14 @@ export interface InjuryReport {
   healthImpact: number;
 }
 
+/** A currently-sidelined injury. Cleared once the absolute week reaches
+ *  `returnWeekAbsolute` (see game-engine/events.ts's `absoluteWeek`). */
+export interface ActiveInjury {
+  name: string;
+  severity: InjuryReport["severity"];
+  returnWeekAbsolute: number;
+}
+
 // ---------------------------------------------------------------------------
 // Season & career
 // ---------------------------------------------------------------------------
@@ -576,6 +584,8 @@ export interface CareerState {
   depthChart: DepthChart;
   relationships: Relationship[];
   academics: AcademicTerm;
+  /** Currently sidelined injury, or null when healthy enough to play. */
+  activeInjury: ActiveInjury | null;
 
   season: SeasonState;
   weekOfSeason: number; // 1-based within the season

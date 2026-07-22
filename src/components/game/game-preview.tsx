@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ScheduleGame } from "@/game-engine/types";
+import type { ActiveInjury, ScheduleGame } from "@/game-engine/types";
 import { getSchool } from "@/content/schools";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,13 +10,17 @@ import { Button } from "@/components/ui/button";
 /**
  * Game-day preview step. Shows the matchup for the current unplayed week and
  * a "Kickoff" action, or an empty state if no game is scheduled this week.
+ * When `activeInjury` is set, the player is currently sidelined — kickoff
+ * simulates the team's result without them instead of offering decisions.
  */
 export function GamePreview({
   game,
   onKickoff,
+  activeInjury = null,
 }: {
   game: ScheduleGame | undefined;
   onKickoff: () => void;
+  activeInjury?: ActiveInjury | null;
 }) {
   if (!game) {
     return (
@@ -73,8 +77,19 @@ export function GamePreview({
             </div>
           ) : null}
         </dl>
+        {activeInjury ? (
+          <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm">
+            <p className="font-medium text-destructive">
+              You&apos;re out with {activeInjury.name} ({activeInjury.severity})
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              The team plays on without you this week — no game-day decisions to
+              make while you&apos;re sidelined.
+            </p>
+          </div>
+        ) : null}
         <Button variant="stadium" size="lg" onClick={onKickoff}>
-          Kickoff
+          {activeInjury ? "Simulate Without Me" : "Kickoff"}
         </Button>
       </CardContent>
     </Card>

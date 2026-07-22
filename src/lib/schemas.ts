@@ -103,6 +103,9 @@ export const careerSaveSchema = z.object({
   depthChart: z.object({}).passthrough(),
   relationships: z.array(z.object({}).passthrough()),
   academics: z.object({}).passthrough(),
+  // Added after saves already existed in the wild — default to null so
+  // pre-existing saves without this field still validate (treated as healthy).
+  activeInjury: z.object({}).passthrough().nullable().default(null),
   season: z.object({}).passthrough(),
   weekOfSeason: z.number(),
   actionPoints: z.number(),

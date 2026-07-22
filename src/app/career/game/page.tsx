@@ -6,6 +6,7 @@ import { useCareerStore } from "@/stores/career-store";
 import { GamePreview } from "@/components/game/game-preview";
 import { GameDayDecisions } from "@/components/game/game-day-decisions";
 import { GameRecap } from "@/components/game/game-recap";
+import { absoluteWeek } from "@/game-engine/events";
 import type { GameDayDecision, GameResult } from "@/game-engine/types";
 
 type Step = "preview" | "decisions" | "recap";
@@ -32,8 +33,23 @@ export default function GameDayPage() {
   const game = career.season.schedule.find(
     (g) => g.week === career.weekOfSeason && !g.played,
   );
+  const sidelined = Boolean(
+    career.activeInjury &&
+    absoluteWeek(career.season.season, career.weekOfSeason) <
+      career.activeInjury.returnWeekAbsolute,
+  );
 
   function handleKickoff() {
+    if (sidelined) {
+      // Sidelined: the store simulates the team's result without the
+      // player — no game-day decisions to make.
+      const played = playGame([]);
+      if (played) {
+        setResult(played);
+        setStep("recap");
+      }
+      return;
+    }
     setDecisions(gameDayDecisions());
     setStep("decisions");
   }
@@ -65,5 +81,11 @@ export default function GameDayPage() {
     return <GameDayDecisions decisions={decisions} onSubmit={handleSimulate} />;
   }
 
-  return <GamePreview game={game} onKickoff={handleKickoff} />;
+  return (
+    <GamePreview
+      game={game}
+      onKickoff={handleKickoff}
+      activeInjury={sidelined ? career.activeInjury : null}
+    />
+  );
 }

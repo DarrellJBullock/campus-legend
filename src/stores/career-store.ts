@@ -213,6 +213,16 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     const resources = applyDelta(outcome.resources, {
       coachTrust: outcome.coachTrustDelta,
     });
+    const activeInjury =
+      outcome.injury && outcome.injury.weeksOut > 0
+        ? {
+            name: outcome.injury.name,
+            severity: outcome.injury.severity,
+            returnWeekAbsolute:
+              absoluteWeek(c.season.season, c.weekOfSeason) +
+              outcome.injury.weeksOut,
+          }
+        : c.activeInjury;
     const next: CareerState = {
       ...c,
       resources,
@@ -220,6 +230,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       actionPoints: c.actionPoints - 1,
       actionsThisWeek: [...c.actionsThisWeek, actionId],
       rngCursor: rng.getCursor(),
+      activeInjury,
     };
 
     if (outcome.bonusText)
@@ -328,6 +339,21 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       });
     }
 
+    const nextWeekOfSeason = c.weekOfSeason + 1;
+    let activeInjury = c.activeInjury;
+    if (
+      activeInjury &&
+      absoluteWeek(c.season.season, nextWeekOfSeason) >=
+        activeInjury.returnWeekAbsolute
+    ) {
+      toast({
+        title: "Cleared to Play",
+        description: `You're fully recovered from your ${activeInjury.name.toLowerCase()} and ready to go.`,
+        variant: "success",
+      });
+      activeInjury = null;
+    }
+
     const next: CareerState = {
       ...c,
       resources,
@@ -336,11 +362,12 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       academics,
       news,
       transactions,
-      weekOfSeason: c.weekOfSeason + 1,
+      weekOfSeason: nextWeekOfSeason,
       actionPoints: ACTION_POINTS_PER_WEEK,
       actionsThisWeek: [],
       season: { ...c.season, phase: "Regular" },
       rngCursor: rng.getCursor(),
+      activeInjury,
     };
     set({ career: persist(next) });
   },
@@ -365,6 +392,74 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
         variant: "destructive",
       });
       return null;
+    }
+
+    const sidelined =
+      c.activeInjury &&
+      absoluteWeek(c.season.season, c.weekOfSeason) <
+        c.activeInjury.returnWeekAbsolute;
+    if (sidelined) {
+      const injury = c.activeInjury!;
+      const rng = rngFor(c.seed, c.rngCursor);
+      const school = getSchool(c.schoolId);
+      const teamQuality = school ? school.athleticPrestige : 60;
+      const winChance = Math.min(
+        0.85,
+        Math.max(0.15, 0.5 + (teamQuality - game.opponent.strength) / 200),
+      );
+      const win = rng.chance(winChance);
+      const winnerScore = rng.int(17, 38);
+      const loserScore = Math.max(0, winnerScore - rng.int(3, 21));
+      const teamName = school ? `${school.name} ${school.mascot}` : "Your team";
+
+      const result: GameResult = {
+        week: c.weekOfSeason,
+        season: c.season.season,
+        opponentName: game.opponent.name,
+        isRival: game.opponent.isRival,
+        playerScore: win ? winnerScore : loserScore,
+        opponentScore: win ? loserScore : winnerScore,
+        win,
+        stats: {},
+        performanceGrade: "DNP",
+        performanceScore: 0,
+        keyPlays: [
+          `You watched from the sideline, still recovering from your ${injury.name.toLowerCase()}.`,
+        ],
+        coachFeedback: "Get healthy — we need you back at full strength.",
+        headline: `${teamName} ${win ? "wins" : "falls"} while ${c.athlete.firstName} ${c.athlete.lastName} sits out with injury`,
+        attributeXp: 0,
+        injury: null,
+        reputationDelta: 0,
+        draftStockDelta: 0,
+        depthChartEffect: "No change — you didn't play this week.",
+      };
+
+      const season = recordResult(c.season, c.weekOfSeason, win);
+      const withResult: CareerState = {
+        ...c,
+        season: {
+          ...season,
+          schedule: season.schedule.map((g) =>
+            g.week === c.weekOfSeason ? { ...g, result } : g,
+          ),
+        },
+        gameLog: [...c.gameLog, result],
+        news: [
+          ...c.news,
+          {
+            id: `news-${absoluteWeek(c.season.season, c.weekOfSeason)}`,
+            week: c.weekOfSeason,
+            season: c.season.season,
+            headline: result.headline,
+            body: result.coachFeedback,
+            tone: win ? "positive" : "negative",
+          },
+        ],
+        rngCursor: rng.getCursor(),
+      };
+      set({ career: persist(withResult), lastGameResult: result });
+      return result;
     }
 
     const rng = rngFor(c.seed, c.rngCursor);

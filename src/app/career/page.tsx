@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/utils";
 import { REGULAR_SEASON_GAMES } from "@/game-engine/types";
+import { absoluteWeek } from "@/game-engine/events";
 
 const QUICK_LINKS = [
   {
@@ -109,6 +110,17 @@ export default function CareerHubPage() {
               <Badge variant="outline">
                 {career.season.wins}-{career.season.losses}
               </Badge>
+              {career.activeInjury ? (
+                <Badge variant="destructive">
+                  OUT: {career.activeInjury.name} (
+                  {Math.max(
+                    0,
+                    career.activeInjury.returnWeekAbsolute -
+                      absoluteWeek(career.season.season, career.weekOfSeason),
+                  )}{" "}
+                  wk left)
+                </Badge>
+              ) : null}
               <Badge
                 variant={
                   career.resources.eligibility === "Eligible"
