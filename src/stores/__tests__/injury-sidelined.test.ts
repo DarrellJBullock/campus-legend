@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useCareerStore } from "@/stores/career-store";
 import { createTestCareer } from "@/test/fixtures";
 import { absoluteWeek } from "@/game-engine/events";
+import { defaultResources } from "@/game-engine/energy";
 
 describe("career-store: sidelined by injury", () => {
   beforeEach(() => {
@@ -48,6 +49,35 @@ describe("career-store: sidelined by injury", () => {
     useCareerStore.getState().advanceWeek();
 
     expect(useCareerStore.getState().career?.activeInjury).toBeNull();
+  });
+
+  it("a game-inflicted injury also sidelines the player, not just training injuries", () => {
+    // Regression: only performAction (training) set activeInjury at first;
+    // playGame's own injury roll updated resources but never sidelined the
+    // player, so a game injury still let you suit up the next week.
+    let found = false;
+    for (let i = 0; i < 40 && !found; i++) {
+      useCareerStore.getState().load(
+        createTestCareer({
+          seed: `game-injury-try-${i}`,
+          weekOfSeason: 1,
+          resources: {
+            ...defaultResources(),
+            injuryRisk: 100,
+            fatigue: 100,
+            health: 0,
+          },
+        }),
+      );
+      const result = useCareerStore.getState().playGame([]);
+      if (result?.injury) {
+        found = true;
+        const after = useCareerStore.getState().career;
+        expect(after?.activeInjury).not.toBeNull();
+        expect(after?.activeInjury?.name).toBe(result.injury.name);
+      }
+    }
+    expect(found).toBe(true);
   });
 
   it("advanceWeek keeps the injury active before the return week", () => {

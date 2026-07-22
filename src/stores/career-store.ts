@@ -66,6 +66,7 @@ import {
 import { initialDepthChart } from "@/game-engine/career";
 import { STORY_EVENTS } from "@/content/events";
 import { getSponsor } from "@/content/sponsors";
+import { MILESTONE_NEWS, renderNews } from "@/content/news";
 import { getSchool, coachingQuality, SCHOOLS } from "@/content/schools";
 import {
   saveLocalCareer,
@@ -136,6 +137,32 @@ function persist(career: CareerState): CareerState {
     });
   }
   return stamped;
+}
+
+/** Build a milestone news article (captain, award, injury, deal) from the
+ *  shared content templates in content/news.ts — previously these existed
+ *  only as unused sample content for the landing page. */
+function milestoneNews(
+  templateId: (typeof MILESTONE_NEWS)[number]["id"],
+  athlete: CareerState["athlete"],
+  schoolId: string,
+  weekOfSeason: number,
+  season: number,
+) {
+  const tpl = MILESTONE_NEWS.find((t) => t.id === templateId)!;
+  const school = getSchool(schoolId);
+  const rendered = renderNews(tpl, {
+    name: `${athlete.firstName} ${athlete.lastName}`,
+    school: school?.name ?? "the program",
+  });
+  return {
+    id: `news-${templateId}-${absoluteWeek(season, weekOfSeason)}`,
+    week: weekOfSeason,
+    season,
+    headline: rendered.headline,
+    body: rendered.body,
+    tone: tpl.tone,
+  };
 }
 
 export const useCareerStore = create<CareerStore>((set, get) => ({
@@ -213,16 +240,28 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     const resources = applyDelta(outcome.resources, {
       coachTrust: outcome.coachTrustDelta,
     });
-    const activeInjury =
-      outcome.injury && outcome.injury.weeksOut > 0
-        ? {
-            name: outcome.injury.name,
-            severity: outcome.injury.severity,
-            returnWeekAbsolute:
-              absoluteWeek(c.season.season, c.weekOfSeason) +
-              outcome.injury.weeksOut,
-          }
-        : c.activeInjury;
+    const isNewInjury = Boolean(outcome.injury && outcome.injury.weeksOut > 0);
+    const activeInjury = isNewInjury
+      ? {
+          name: outcome.injury!.name,
+          severity: outcome.injury!.severity,
+          returnWeekAbsolute:
+            absoluteWeek(c.season.season, c.weekOfSeason) +
+            outcome.injury!.weeksOut,
+        }
+      : c.activeInjury;
+    const news = isNewInjury
+      ? [
+          ...c.news,
+          milestoneNews(
+            "n-mile-injury",
+            c.athlete,
+            c.schoolId,
+            c.weekOfSeason,
+            c.season.season,
+          ),
+        ]
+      : c.news;
     const next: CareerState = {
       ...c,
       resources,
@@ -231,6 +270,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       actionsThisWeek: [...c.actionsThisWeek, actionId],
       rngCursor: rng.getCursor(),
       activeInjury,
+      news,
     };
 
     if (outcome.bonusText)
@@ -514,12 +554,22 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       draftStock: result.draftStockDelta,
       teamChemistry: result.win ? 2 : -1,
     });
+    const isNewInjury = Boolean(result.injury && result.injury.weeksOut > 0);
     if (result.injury) {
       resources = applyDelta(resources, {
         health: -result.injury.healthImpact,
         injuryRisk: 10,
       });
     }
+    const activeInjury = isNewInjury
+      ? {
+          name: result.injury!.name,
+          severity: result.injury!.severity,
+          returnWeekAbsolute:
+            absoluteWeek(c.season.season, c.weekOfSeason) +
+            result.injury!.weeksOut,
+        }
+      : c.activeInjury;
 
     const season = recordResult(c.season, c.weekOfSeason, result.win);
     const overall = computeOverall(c.athlete.position, c.athlete.attributes);
@@ -538,6 +588,42 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       false,
     );
 
+    let news = [
+      ...c.news,
+      {
+        id: `news-${absoluteWeek(c.season.season, c.weekOfSeason)}`,
+        week: c.weekOfSeason,
+        season: c.season.season,
+        headline: result.headline,
+        body: result.coachFeedback,
+        tone: result.win ? ("positive" as const) : ("negative" as const),
+      },
+    ];
+    if (isNewInjury) {
+      news = [
+        ...news,
+        milestoneNews(
+          "n-mile-injury",
+          c.athlete,
+          c.schoolId,
+          c.weekOfSeason,
+          c.season.season,
+        ),
+      ];
+    }
+    if (depthChart.role === "Captain" && c.depthChart.role !== "Captain") {
+      news = [
+        ...news,
+        milestoneNews(
+          "n-mile-captain",
+          c.athlete,
+          c.schoolId,
+          c.weekOfSeason,
+          c.season.season,
+        ),
+      ];
+    }
+
     const withResult: CareerState = {
       ...c,
       resources,
@@ -548,18 +634,9 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
         ),
       },
       depthChart,
+      activeInjury,
       gameLog: [...c.gameLog, result],
-      news: [
-        ...c.news,
-        {
-          id: `news-${absoluteWeek(c.season.season, c.weekOfSeason)}`,
-          week: c.weekOfSeason,
-          season: c.season.season,
-          headline: result.headline,
-          body: result.coachFeedback,
-          tone: result.win ? "positive" : "negative",
-        },
-      ],
+      news,
       rngCursor: rng.getCursor(),
     };
 
@@ -671,6 +748,16 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
           amount: signingBonus,
         },
       ],
+      news: [
+        ...c.news,
+        milestoneNews(
+          "n-mile-deal",
+          c.athlete,
+          c.schoolId,
+          c.weekOfSeason,
+          c.season.season,
+        ),
+      ],
     };
     toast({
       title: "Deal signed!",
@@ -719,6 +806,19 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
         finalScore: null,
         termGpa: null,
       },
+      news: [
+        ...c.news,
+        ...awards.map((a) => {
+          const base = milestoneNews(
+            "n-mile-award",
+            c.athlete,
+            c.schoolId,
+            c.weekOfSeason,
+            c.season.season,
+          );
+          return { ...base, id: `${base.id}-${a.id}`, body: a.description };
+        }),
+      ],
       rngCursor: rng.getCursor(),
     };
     awards.forEach((a) =>
