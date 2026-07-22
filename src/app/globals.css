@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Campus Legend design system
+   Deep navy / charcoal fields, warm cream "paper" surfaces, stadium-light
+   highlights. School colors are injected per-team at runtime via --team-*.
+--------------------------------------------------------------------------- */
+
+@layer base {
+  :root {
+    /* shadcn-compatible semantic tokens (dark stadium theme is the default) */
+    --background: 222 47% 8%;
+    --foreground: 40 30% 92%;
+
+    --card: 222 40% 12%;
+    --card-foreground: 40 30% 92%;
+
+    --popover: 222 44% 10%;
+    --popover-foreground: 40 30% 92%;
+
+    --primary: 45 93% 55%; /* stadium light gold */
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 222 30% 20%;
+    --secondary-foreground: 40 30% 92%;
+
+    --muted: 222 25% 18%;
+    --muted-foreground: 40 12% 68%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 40 30% 96%;
+
+    --border: 222 25% 22%;
+    --input: 222 25% 22%;
+    --ring: 45 93% 55%;
+
+    --radius: 0.65rem;
+
+    /* Brand palette */
+    --cl-navy: 222 47% 16%;
+    --cl-navy-deep: 222 55% 8%;
+    --cl-charcoal: 220 14% 14%;
+    --cl-cream: 40 44% 92%;
+    --cl-stadium: 45 96% 58%;
+    --cl-turf: 140 42% 30%;
+
+    /* Team colors — overridden at runtime by the active program */
+    --team-primary: 222 47% 30%;
+    --team-secondary: 45 93% 55%;
+  }
+
+  /* Optional light "paper document" theme (used on eligibility docs etc.) */
+  .theme-paper {
+    --background: 40 44% 92%;
+    --foreground: 222 47% 14%;
+    --card: 40 40% 96%;
+    --card-foreground: 222 47% 14%;
+    --muted: 40 20% 84%;
+    --muted-foreground: 222 20% 34%;
+    --border: 40 20% 78%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    background-image:
+      radial-gradient(
+        ellipse 80% 50% at 50% -10%,
+        hsl(var(--cl-navy) / 0.6),
+        transparent
+      ),
+      var(--paper-grain, none);
+    background-attachment: fixed;
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer components {
+  /* Cream "document" surface — scholarship papers, eligibility, newspapers */
+  .surface-paper {
+    @apply bg-cream text-charcoal;
+    background-image:
+      linear-gradient(hsl(var(--cl-navy) / 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--cl-navy) / 0.02) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Locker-room nameplate */
+  .nameplate {
+    @apply relative rounded-md border-2 px-4 py-2 font-display uppercase tracking-widest;
+    border-color: hsl(var(--team-secondary));
+    background: linear-gradient(
+      180deg,
+      hsl(var(--team-primary)),
+      hsl(var(--team-primary) / 0.7)
+    );
+  }
+
+  /* Scoreboard digits */
+  .scoreboard {
+    @apply font-mono font-bold tabular-nums;
+    text-shadow: 0 0 12px hsl(var(--cl-stadium) / 0.5);
+  }
+
+  /* Trading-card frame */
+  .trading-card {
+    @apply relative overflow-hidden rounded-xl border-2 shadow-xl;
+    border-color: hsl(var(--team-secondary));
+    background: linear-gradient(
+      160deg,
+      hsl(var(--team-primary) / 0.9),
+      hsl(var(--cl-navy-deep))
+    );
+  }
+
+  .stat-bar {
+    @apply h-2 overflow-hidden rounded-full bg-muted;
+  }
+  .stat-bar > span {
+    @apply block h-full rounded-full transition-all duration-500;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--cl-turf)),
+      hsl(var(--cl-stadium))
+    );
+  }
+
+  .focus-ring {
+    @apply outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+}
+
+/* Respect reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Accessible skip link */
+.skip-link {
+  @apply sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground;
+}
