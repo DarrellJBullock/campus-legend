@@ -14,8 +14,13 @@ chase a fictional professional draft across four college seasons.
 
 ## Screenshots
 
-_Coming soon — add screenshots of the landing page, career hub, athlete
-creation, and a game recap here before publishing._
+| Landing                                       | Athlete Creation                                           |
+| --------------------------------------------- | ---------------------------------------------------------- |
+| ![Landing page](docs/screenshots/landing.png) | ![Athlete creation](docs/screenshots/athlete-creation.png) |
+
+| Career Hub                                     | Game Recap                                     |
+| ---------------------------------------------- | ---------------------------------------------- |
+| ![Career hub](docs/screenshots/career-hub.png) | ![Game recap](docs/screenshots/game-recap.png) |
 
 ## Portfolio value
 
