@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/utils";
+import { REGULAR_SEASON_GAMES } from "@/game-engine/types";
 
 const QUICK_LINKS = [
   {
@@ -77,9 +78,12 @@ export default function CareerHubPage() {
     career.athlete.attributes,
   );
   const school = getSchool(career.schoolId);
-  const upcoming = career.season.schedule.find(
-    (g) => g.week === career.weekOfSeason && !g.played,
-  );
+  const seasonComplete = career.weekOfSeason > REGULAR_SEASON_GAMES;
+  const upcoming = seasonComplete
+    ? undefined
+    : career.season.schedule.find(
+        (g) => g.week === career.weekOfSeason && !g.played,
+      );
   const objectives = objectivesFor(
     career.depthChart.role,
     career.resources.eligibility,
@@ -117,9 +121,11 @@ export default function CareerHubPage() {
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              {upcoming
-                ? `Upcoming: ${upcoming.home ? "vs." : "at"} ${upcoming.opponent.name}${upcoming.opponent.isRival ? " (Rivalry)" : ""}`
-                : "No game scheduled this week — focus on development."}
+              {seasonComplete
+                ? `Season ${career.season.season} is complete — check your recap and head into the offseason.`
+                : upcoming
+                  ? `Upcoming: ${upcoming.home ? "vs." : "at"} ${upcoming.opponent.name}${upcoming.opponent.isRival ? " (Rivalry)" : ""}`
+                  : "No game scheduled this week — focus on development."}
             </p>
             <ul className="space-y-1 text-sm">
               {objectives.map((o) => (
@@ -132,14 +138,22 @@ export default function CareerHubPage() {
               ))}
             </ul>
             <div className="flex flex-wrap gap-2 pt-2">
-              <Button asChild variant="stadium">
-                <Link href="/career/planner">Go to Weekly Planner</Link>
-              </Button>
-              {upcoming ? (
-                <Button asChild variant="secondary">
-                  <Link href="/career/game">Game Preview</Link>
+              {seasonComplete ? (
+                <Button asChild variant="stadium">
+                  <Link href="/career/season-recap">View Season Recap</Link>
                 </Button>
-              ) : null}
+              ) : (
+                <>
+                  <Button asChild variant="stadium">
+                    <Link href="/career/planner">Go to Weekly Planner</Link>
+                  </Button>
+                  {upcoming ? (
+                    <Button asChild variant="secondary">
+                      <Link href="/career/game">Game Preview</Link>
+                    </Button>
+                  ) : null}
+                </>
+              )}
             </div>
           </CardContent>
         </Card>

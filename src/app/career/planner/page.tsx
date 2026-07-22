@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useCareerStore } from "@/stores/career-store";
 import { projectAction } from "@/game-engine/training";
-import { ATTRIBUTE_LABELS } from "@/game-engine/types";
+import { ATTRIBUTE_LABELS, REGULAR_SEASON_GAMES } from "@/game-engine/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,28 @@ export default function WeeklyPlannerPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   if (!career) return null;
+
+  const seasonComplete = career.weekOfSeason > REGULAR_SEASON_GAMES;
+
+  if (seasonComplete) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Season {career.season.season} Complete</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            You&apos;ve played through all {REGULAR_SEASON_GAMES} games this
+            season. Finish up with a season recap before moving into the
+            offseason.
+          </p>
+          <Button asChild variant="stadium" size="lg">
+            <Link href="/career/season-recap">View Season Recap</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const actions = weeklyActions();
   const upcomingGame = career.season.schedule.find(

@@ -31,4 +31,17 @@ describe("WeeklyPlannerPage", () => {
     expect(useCareerStore.getState().career?.actionPoints).toBe(3);
     expect(useCareerStore.getState().career?.actionsThisWeek).toHaveLength(1);
   });
+
+  it("shows a season-complete card instead of the action grid once all 12 games are done", () => {
+    useCareerStore.getState().load(createTestCareer({ weekOfSeason: 13 }));
+    render(<WeeklyPlannerPage />);
+
+    expect(screen.getByText("Season 1 Complete")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "View Season Recap" }),
+    ).toHaveAttribute("href", "/career/season-recap");
+    expect(
+      screen.queryByRole("button", { name: "Confirm" }),
+    ).not.toBeInTheDocument();
+  });
 });
