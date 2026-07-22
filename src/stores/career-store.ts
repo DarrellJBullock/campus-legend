@@ -71,7 +71,16 @@ import {
   saveLocalCareer,
   loadLocalCareer,
   setActiveCareer,
+  getActiveCareerId,
 } from "@/lib/local-save";
+import {
+  createSupabaseBrowserClient,
+  isSupabaseConfigured,
+} from "@/lib/supabase/client";
+import {
+  upsertCloudCareer,
+  loadCloudCareer as fetchCloudCareer,
+} from "@/lib/cloud-save";
 import { toast } from "@/components/ui/use-toast";
 import { round } from "@/lib/utils";
 import { ACTION_POINTS_PER_WEEK, MAX_SEASONS } from "@/game-engine/types";
@@ -84,9 +93,12 @@ interface CareerStore {
   career: CareerState | null;
   lastGameResult: GameResult | null;
   activeEvent: StoryEvent | null;
+  /** Current authenticated Supabase user id, or null when signed out/guest. */
+  userId: string | null;
 
   load: (career: CareerState) => void;
   loadById: (id: string) => boolean;
+  loadCloudById: (slug: string) => Promise<boolean>;
   clear: () => void;
 
   weeklyActions: () => WeeklyAction[];
@@ -103,10 +115,26 @@ interface CareerStore {
   transferSchool: (schoolId: string) => void;
 }
 
-/** Persist helper: stamp updatedAt + cursor and write to local storage. */
+/** Current authenticated Supabase user id, tracked outside React so the
+ *  plain `persist()` function below can fire a background cloud sync. */
+let currentUserId: string | null = null;
+
+/** Persist helper: stamp updatedAt, write to local storage, and — when
+ *  signed in — sync to the cloud in the background (best-effort; a failed
+ *  cloud write never blocks or reverts the local save). */
 function persist(career: CareerState): CareerState {
   const stamped = { ...career, updatedAt: nowIso() };
   saveLocalCareer(stamped);
+  if (currentUserId) {
+    const supabase = createSupabaseBrowserClient();
+    void upsertCloudCareer(supabase, currentUserId, stamped).catch(() => {
+      toast({
+        title: "Cloud save failed",
+        description: "Your progress is saved locally; we'll retry next save.",
+        variant: "destructive",
+      });
+    });
+  }
   return stamped;
 }
 
@@ -114,6 +142,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
   career: null,
   lastGameResult: null,
   activeEvent: null,
+  userId: null,
 
   load: (career) => {
     setActiveCareer(career.id);
@@ -124,6 +153,17 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     const c = loadLocalCareer(id);
     if (!c) return false;
     setActiveCareer(id);
+    set({ career: c, lastGameResult: null, activeEvent: null });
+    return true;
+  },
+
+  loadCloudById: async (slug) => {
+    if (!currentUserId) return false;
+    const supabase = createSupabaseBrowserClient();
+    const c = await fetchCloudCareer(supabase, currentUserId, slug);
+    if (!c) return false;
+    setActiveCareer(c.id);
+    saveLocalCareer(c);
     set({ career: c, lastGameResult: null, activeEvent: null });
     return true;
   },
@@ -656,3 +696,33 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     set({ career: persist(next) });
   },
 }));
+
+/**
+ * Auth session tracking. Runs once per browser session (this module is a
+ * singleton). Mirrors the Supabase session into `currentUserId` (used by the
+ * plain `persist()` function above) and into the store's `userId` field (so
+ * components can react to sign-in/out). On a fresh sign-in, also pushes
+ * whichever career is currently active in local storage to the cloud — this
+ * is the guest-to-account handoff: play as a guest, sign in, and your
+ * in-progress career is copied to your account automatically.
+ */
+if (typeof window !== "undefined" && isSupabaseConfigured()) {
+  const supabase = createSupabaseBrowserClient();
+
+  supabase.auth.getSession().then(({ data }) => {
+    currentUserId = data.session?.user.id ?? null;
+    useCareerStore.setState({ userId: currentUserId });
+  });
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    currentUserId = session?.user.id ?? null;
+    useCareerStore.setState({ userId: currentUserId });
+    if (event === "SIGNED_IN" && currentUserId) {
+      const activeId = getActiveCareerId();
+      const localCareer = activeId ? loadLocalCareer(activeId) : null;
+      if (localCareer) {
+        void upsertCloudCareer(supabase, currentUserId, localCareer);
+      }
+    }
+  });
+}
