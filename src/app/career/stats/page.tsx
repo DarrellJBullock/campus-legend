@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useCareerStore } from "@/stores/career-store";
 import { computeOverall } from "@/game-engine/attributes";
+import { STAT_FIELDS } from "@/components/game/game-recap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,14 @@ export default function StatsPage() {
   const wins = gameLog.filter((g) => g.win).length;
   const losses = gameLog.length - wins;
   const winPct = gameLog.length > 0 ? (wins / gameLog.length) * 100 : 0;
+
+  const cumulativeStats = STAT_FIELDS[career.athlete.position].map(
+    ({ key, label }) => ({
+      key,
+      label,
+      total: gameLog.reduce((sum, g) => sum + (g.stats[key] ?? 0), 0),
+    }),
+  );
 
   const chartData: GameChartPoint[] = gameLog.map((g, i) => ({
     index: i + 1,
@@ -78,6 +87,31 @@ export default function StatsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Career Totals</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {gameLog.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Play your first game to start building your career totals.
+            </p>
+          ) : (
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+              {cumulativeStats.map(({ key, label, total }) => (
+                <div
+                  key={key}
+                  className="flex justify-between border-b border-border/50 pb-1"
+                >
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="scoreboard font-mono">{total}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

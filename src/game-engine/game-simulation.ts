@@ -97,6 +97,17 @@ export function performanceGrade(score: number): string {
   return "F";
 }
 
+/**
+ * Touchdown-style counting stat: scales with performance but keeps genuine
+ * variance — including a real chance of a scoreless game — unlike
+ * `round(mean * swing())` (swing's 0.75 floor made at least one score
+ * almost guaranteed the moment `mean` cleared a very low bar).
+ */
+function scoreCount(mean: number, rng: Rng): number {
+  const sd = Math.max(0.6, mean * 0.7);
+  return Math.max(0, Math.round(rng.gaussian(mean, sd)));
+}
+
 /** Generate a position-specific stat line scaled by performance. */
 export function generateStats(
   position: Position,
@@ -115,7 +126,7 @@ export function generateStats(
         passAttempts: attempts,
         completions,
         passYards: Math.round(completions * rng.float(9, 14) * (0.7 + p * 0.6)),
-        passTds: Math.round(clamp(p * 4 * swing(), 0, 6)),
+        passTds: scoreCount(p * 2.4, rng),
         interceptions: Math.round(clamp((1 - p) * 3 * swing(), 0, 4)),
         rushYards: Math.round(rng.int(-2, 20) * (0.6 + p)),
       };
@@ -127,7 +138,7 @@ export function generateStats(
         rbRushYards: Math.round(
           carries * rng.float(2.8, 6.2) * (0.7 + p * 0.7),
         ),
-        rushTds: Math.round(clamp(p * 2.5 * swing(), 0, 4)),
+        rushTds: scoreCount(p * 1.6, rng),
         receptions: Math.round(rng.int(0, 5) * (0.6 + p)),
         recYards: Math.round(rng.int(0, 40) * (0.6 + p)),
         fumbles: rng.chance((1 - p) * 0.3) ? 1 : 0,
@@ -140,7 +151,7 @@ export function generateStats(
         targets,
         wrReceptions: receptions,
         wrRecYards: Math.round(receptions * rng.float(9, 18) * (0.7 + p * 0.6)),
-        wrTds: Math.round(clamp(p * 2 * swing(), 0, 3)),
+        wrTds: scoreCount(p * 1.3, rng),
         drops: Math.round(clamp((1 - p) * 2 * swing(), 0, 3)),
       };
     }

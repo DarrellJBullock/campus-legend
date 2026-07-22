@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-const STAT_FIELDS: Record<
+/** Position-specific box-score fields, shared with the career stats page's
+ *  cumulative totals so both surfaces show exactly the same stat set. */
+export const STAT_FIELDS: Record<
   Position,
   { key: keyof GameStatLine; label: string }[]
 > = {

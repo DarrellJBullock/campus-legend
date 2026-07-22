@@ -105,6 +105,19 @@ describe("game simulation", () => {
     expect(cb.passAttempts).toBeUndefined();
   });
 
+  it("touchdowns are not guaranteed every game, even at an average performance", () => {
+    // Regression: passTds used to be round(mean * swing()), whose 0.75
+    // swing floor made at least one TD almost certain any time mean > ~0.2.
+    let zeroCount = 0;
+    const N = 200;
+    for (let i = 0; i < N; i++) {
+      const stats = generateStats("QB", 55, new Rng(`qb-td-${i}`));
+      if ((stats.passTds ?? 0) === 0) zeroCount++;
+    }
+    expect(zeroCount).toBeGreaterThan(0);
+    expect(zeroCount).toBeLessThan(N);
+  });
+
   it("assigns a valid letter grade", () => {
     expect(performanceGrade(95)).toBe("A+");
     expect(performanceGrade(10)).toBe("F");
