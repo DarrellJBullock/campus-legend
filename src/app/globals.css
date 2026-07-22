@@ -86,7 +86,8 @@
   h2,
   h3,
   .font-display {
-    @apply font-display tracking-tight;
+    font-family: var(--font-display), system-ui, sans-serif;
+    @apply tracking-tight;
   }
 }
 
