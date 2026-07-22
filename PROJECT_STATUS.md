@@ -2,75 +2,116 @@
 
 _Last updated: 2026-07-22_
 
-## Where things stand
+## Where things stand: MVP complete
 
-The game engine, content, persistence, and Supabase/RLS layers were built in an
-earlier pass and are solid: 14 engine modules, 84 passing unit tests, 12
-fictional schools across 3 conferences, 24 sponsors, 46 story events, and a
-Zustand store (`src/stores/career-store.ts`) that wires it all together.
+Every acceptance-criterion flow works end-to-end, verified both by an
+automated test suite and by manually clicking through the running app in a
+browser: guest career creation → athlete creation → school selection →
+freshman intro → career hub → weekly planner (training/academics/recovery/
+social/branding actions with previews) → story events → sponsorship
+marketplace → simulated game (preview → game-day decisions → recap) →
+season/week advancement → save persistence across a page reload.
 
-What was missing when this pass started: **zero UI routes**. `src/app/` had
-only `layout.tsx` + `globals.css` — no landing page, no onboarding, no career
-hub, nothing playable. This pass is building the full page tree on top of the
-existing engine/store.
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (101/101), `pnpm test:e2e`
+  (2/2, chromium + mobile), and `pnpm build` (all 24 routes prerender) are
+  all green as of this update.
+- 12 fictional schools / 3 conferences, 24 sponsors, 46 story events across
+  17 categories, 5 playable positions — all verified via
+  `npx tsx scripts/seed.ts`.
 
-## Completed this pass
+## How this pass was carried out
 
-- Repo initialized (`git init -b main`), dependencies installed, baseline
-  typecheck/lint/test all green (fixed several pre-existing type errors:
-  non-tuple `as const` arrays breaking `z.enum`, an untyped Supabase cookie
-  callback, a stray `discipline` key in a `ResourceDelta`, a few unused
-  imports/params).
-- Fixed a `globals.css` build error (`@apply font-display` inside `@layer
-base` created a circular dependency with the Tailwind `fontFamily.display`
-  utility of the same name).
-- Landing page (`src/app/page.tsx`) — hero, four-season preview, feature
-  highlights, sample newspaper headlines, Start/Continue/Demo CTAs, footer
-  disclaimer.
-- Auth pages (`/sign-in`, `/sign-up`) — Supabase email/password, with a clear
-  guest-mode fallback when Supabase env vars aren't configured.
-- New-career wizard (`/new-career`) — athlete creation (react-hook-form +
-  the existing Zod schema), school selection (12+ recruiting cards across 3
-  conferences), freshman-intro recap — verified end-to-end in-browser.
-- Career hub (`/career`) and weekly planner (`/career/planner`) — verified
-  in-browser: confirming a training action live-updates attributes/overall
-  and action points.
-- Wired the previously-unused academics exam engine into `advanceWeek()`
-  (midterms week 6, finals week 12) so GPA/eligibility actually respond to
-  study readiness — this was built (`academics.ts`) but never invoked before.
-- Added a `transferSchool` store action (was referenced by the required-pages
-  list but didn't exist).
-- Dispatched 4 parallel sub-agents for the remaining route batches:
-  training/academics/depth-chart/relationships, schedule + game-day flow,
-  sponsorships/stats/awards/news/settings, and season-recap through
-  career-ending/summary. Each was briefed with exact store APIs, existing
-  component conventions, and a hard boundary (no edits to `career-store.ts`
-  or `game-engine/*`) to avoid merge conflicts between them.
+The engine, content, persistence, and Supabase/RLS layers already existed
+from earlier work (14 engine modules, 84 engine unit tests, a Zustand
+store wiring it together). What was missing at the start of this pass:
+**zero UI routes** — `src/app/` had only `layout.tsx` + `globals.css`, no
+git repo, no README/TODO/PROJECT_STATUS.
 
-## In progress / not yet verified
+Work was sequenced as:
 
-- The 4 sub-agent route batches above — pending their completion + my
-  integration pass (typecheck/lint/build, then manual browser click-through
-  of every route, then a commit).
-
-## Not started yet
-
-- Component tests (RTL) and Playwright e2e critical-path tests.
-- GitHub Actions CI workflow.
-- README.
-- Final accessibility/perf/dead-code pass.
-- `pnpm build` production build has not been run yet this pass.
+1. **Foundation**: git init, install deps, fix pre-existing type errors
+   (non-tuple `as const` arrays breaking `z.enum`, an untyped Supabase
+   cookie callback, a stray resource key, unused imports/params) and a
+   `globals.css` build error (`@apply font-display` self-referencing its
+   own utility inside `@layer base` — circular dependency).
+2. **Critical-path pages built directly** (to lock in conventions before
+   parallelizing): landing page, auth pages, the athlete-creation → school
+   → intro onboarding wizard, the career hub, and the weekly planner. Each
+   was verified in-browser immediately after building it.
+3. **Two engine gaps closed** before delegating further UI work: the
+   academics exam engine (`academics.ts`) existed but was never invoked —
+   wired midterms (week 6) and finals (week 12) into `advanceWeek()` so
+   GPA/eligibility actually respond to study readiness. Added a
+   `transferSchool` store action (referenced by the required-pages list
+   but didn't exist).
+4. **Remaining 18 routes built via 4 parallel sub-agents**, each scoped to
+   a disjoint set of files and explicitly forbidden from touching
+   `career-store.ts`, `game-engine/*`, or `content/*` to avoid merge
+   conflicts: (a) training/academics/depth-chart/relationships, (b)
+   schedule + the full game-day wizard, (c) sponsorships/stats/awards/
+   news/settings, (d) season-recap through career-ending/summary.
+5. **Integration pass**: typecheck/lint/test/build after merging all four
+   batches — all green immediately.
+6. **Manual browser click-through of every new route**, which caught two
+   real bugs the automated checks didn't: a `<Badge>` (renders `<div>`)
+   nested inside a `<p>` in the settings page (invalid HTML → hydration
+   error), and a duplicate-course bug in `career.ts`'s `initialAcademics`
+   for athletes with academic strength "Undecided" (the major-course pool
+   and the general-ed pool were identical, so the same course could be
+   added twice, producing a duplicate React key and a repeated row on the
+   Academic Center page). Both fixed and verified.
+7. **Dependency/security audit**: removed two genuinely-unused Radix
+   packages (`@radix-ui/react-toast`, `@radix-ui/react-tooltip` — the
+   toast system here is custom, built on Zustand, not Radix; recharts'
+   `Tooltip` was mistaken for Radix's on first grep and confirmed
+   otherwise). `pnpm audit` surfaced two **critical** Next.js CVEs on the
+   pinned 15.1.6 (RCE via the React Flight protocol; a middleware
+   authorization bypass) — bumped to 15.5.21, which patches both;
+   re-verified typecheck/lint/test/build and a fresh in-browser smoke test
+   after the upgrade.
+8. **Test coverage** (component tests + Playwright e2e) delegated to a
+   dedicated tester sub-agent once the UI was stable: 17 new component
+   tests (athlete creation validation, weekly-action confirm/AP-decrement,
+   resource meters/aria attributes, story-event dialog, sponsorship
+   sign/eligibility, game recap, career summary mid-career vs. resolved),
+   plus one sequential Playwright spec covering the full guest-career
+   happy path including a page reload to confirm save persistence. No
+   bugs found during test-writing; all new tests pass without weakening
+   assertions to dodge real behavior.
+9. **Docs**: this file, `TODO.md`, and `README.md` (features, architecture
+   with a mermaid diagram, engine module table, data model, tech-choice
+   table, setup/deploy instructions, accessibility/security/performance
+   sections, known limitations, roadmap).
 
 ## Known gaps / deliberate simplifications
 
-- Database schema is a single `careers` table with the full `CareerState` as
-  a validated `jsonb` blob (plus a few denormalized columns for listing),
-  not the fully normalized 30-table schema the original spec sketched. This
-  was already the design going in; it's a reasonable, defensible tradeoff for
-  an MVP save system and RLS is correctly scoped per-user.
-- Sponsor `personalityFit` is advisory (shows a mismatch note) rather than a
-  hard eligibility gate — kept deals plentiful rather than over-restrictive.
-- One exam cycle per season (midterm/final), not a separate Fall/Spring term
-  split.
-- Game-day decisions are offered from a small fixed pool (2 of 4 shown per
-  game) rather than per-position content — acceptable for MVP scope.
+- Database schema is a single `careers` table with the full `CareerState`
+  as a validated `jsonb` blob (plus a few denormalized columns for
+  listing), not a fully normalized 30-table schema. This was the existing
+  design going in; RLS is correctly scoped per-user and it's a reasonable
+  MVP tradeoff.
+- Sponsor `personalityFit` is advisory (shows a mismatch note, doesn't
+  block signing) rather than a hard eligibility gate — keeps deals
+  plentiful rather than overly restrictive.
+- One exam cycle per season (midterm/final), not a separate Fall/Spring
+  term split.
+- Game-day decisions draw from a small fixed pool (2 of 4 offered per
+  game) rather than per-position content.
+- The transfer-decision screen's school picker includes the player's
+  current school as a selectable (inert) option rather than excluding it
+  — cosmetic, not a functional bug (selecting it is a no-op in the store).
+- No dedicated screen-reader/assistive-tech audit pass was done beyond
+  what shipped by default (focus rings, skip link, aria-live toasts,
+  `role="meter"` on stat bars, reduced-motion support).
+- Remaining `pnpm audit` findings are all in the Vitest/Vite dev toolchain
+  (never shipped to users) — worth tracking, not urgent.
+
+## Verification commands (all currently green)
+
+```bash
+pnpm typecheck   # clean
+pnpm lint        # clean
+pnpm test        # 101/101 passing (21 files)
+pnpm test:e2e    # 2/2 passing (chromium + mobile)
+pnpm build       # all 24 routes prerender successfully
+```

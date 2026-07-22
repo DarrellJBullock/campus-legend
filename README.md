@@ -291,6 +291,15 @@ gh repo create campus-legend --public --source=. --remote=origin --push
   every variable without real values.
 - No `dangerouslySetInnerHTML` / unsafe HTML rendering anywhere in the app.
 - Run `pnpm audit` periodically to check for known-vulnerable dependencies.
+  Next.js was pinned to 15.1.6 during development, which carried two critical
+  advisories (RCE via the React Flight protocol and a middleware
+  authorization bypass); this repo has been bumped to 15.5.21, which patches
+  both. The remaining `pnpm audit` findings are all in the Vitest/Vite dev
+  toolchain (test-runner only, never shipped to users) — worth watching, not
+  urgent.
+- Two unused Radix dependencies (`@radix-ui/react-toast`,
+  `@radix-ui/react-tooltip`) were removed — the toast system here is a small
+  custom Zustand-backed implementation, not built on Radix.
 
 ## Known limitations
 

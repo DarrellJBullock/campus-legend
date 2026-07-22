@@ -43,10 +43,22 @@
 - [x] GitHub Actions CI (lint, typecheck, test, build) — pre-existing, verified
 - [x] README (features, architecture, setup, deployment, mermaid diagrams)
 - [x] Full `pnpm build` verification — all 24 routes prerender successfully
-- [ ] Component tests (athlete creation, weekly actions, resource display,
-      story events, sponsorship cards, game recap, career summary)
-- [ ] Playwright e2e: guest career → athlete → school → weekly actions →
-      simulate game → review → save/reload
-- [ ] Accessibility pass (keyboard nav, focus states, aria-live announcements)
-- [ ] Remove dead code / unused deps
-- [ ] Final manual click-through of every required page on mobile + desktop
+- [x] Component tests (athlete creation, weekly actions, resource display,
+      story events, sponsorship cards, game recap, career summary) — 17 new
+      tests, 101/101 total passing
+- [x] Playwright e2e: guest career → athlete → school → weekly actions →
+      simulate game → review → save/reload — passes on chromium + mobile
+- [x] Remove dead code / unused deps — dropped unused `@radix-ui/react-toast`
+      and `@radix-ui/react-tooltip`; fixed a duplicate-course bug for
+      "Undecided" majors and a settings-page hydration error found during
+      manual click-through
+- [x] Security: bumped Next.js 15.1.6 → 15.5.21 (patches two critical CVEs:
+      RCE via React Flight protocol, middleware auth bypass)
+- [x] Final manual click-through of every required page on mobile + desktop —
+      landing, onboarding, hub, planner, training, academics, depth chart,
+      relationships, schedule, game-day wizard, sponsorships, stats, awards,
+      news, settings, offseason, transfer, draft (empty state), ending
+      (empty state), summary (mid-career state) all verified live in-browser
+- [ ] Accessibility pass beyond what shipped by default (keyboard nav, focus
+      states, and aria-live announcements already exist from earlier work;
+      no dedicated screen-reader pass has been done)
