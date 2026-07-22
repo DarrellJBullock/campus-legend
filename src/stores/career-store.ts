@@ -29,6 +29,7 @@ import {
   type WeeklyAction,
 } from "@/game-engine/training";
 import { applyDelta, weeklyResourceDrift } from "@/game-engine/energy";
+import { runExams, updateCumulativeGpa } from "@/game-engine/academics";
 import { adjustRelationships } from "@/game-engine/relationships";
 import { computeOverall } from "@/game-engine/attributes";
 import { recomputeDepthChart } from "@/game-engine/depth-chart";
@@ -62,6 +63,7 @@ import {
   resolveEnding,
   runCombine,
 } from "@/game-engine/draft";
+import { initialDepthChart } from "@/game-engine/career";
 import { STORY_EVENTS } from "@/content/events";
 import { getSponsor } from "@/content/sponsors";
 import { getSchool, coachingQuality, SCHOOLS } from "@/content/schools";
@@ -98,6 +100,7 @@ interface CareerStore {
   signSponsor: (sponsorId: string) => void;
   advanceSeason: () => void;
   endCareer: () => void;
+  transferSchool: (schoolId: string) => void;
 }
 
 /** Persist helper: stamp updatedAt + cursor and write to local storage. */
@@ -251,17 +254,53 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       toast({ title: "Consequence", description: p.text });
     }
 
+    // Midterms/finals: study readiness (academicFocus) drives the exam score,
+    // which blends into cumulative GPA and re-derives eligibility.
+    const rng = rngFor(c.seed, c.rngCursor);
+    let academics = { ...c.academics, studyProgress: resources.academicFocus };
+    const examKind =
+      c.weekOfSeason === 6 && academics.midtermScore === null
+        ? "midterm"
+        : c.weekOfSeason === 12 && academics.finalScore === null
+          ? "final"
+          : null;
+    if (examKind) {
+      const { term, termGpa } = runExams(
+        academics,
+        c.athlete.academicStrength,
+        examKind,
+        rng,
+      );
+      academics = term;
+      const nextGpa = updateCumulativeGpa(resources.gpa, termGpa);
+      resources = applyDelta(resources, {
+        gpa: nextGpa - resources.gpa,
+        academicFocus: -20,
+      });
+      toast({
+        title:
+          examKind === "midterm"
+            ? "Midterm Grades Posted"
+            : "Final Grades Posted",
+        description: `Term GPA ${termGpa.toFixed(2)} · Cumulative ${resources.gpa.toFixed(2)}`,
+        variant:
+          resources.eligibility === "Eligible" ? "success" : "destructive",
+      });
+    }
+
     const next: CareerState = {
       ...c,
       resources,
       activeSponsorships: stillActive,
       pendingEffects: remaining,
+      academics,
       news,
       transactions,
       weekOfSeason: c.weekOfSeason + 1,
       actionPoints: ACTION_POINTS_PER_WEEK,
       actionsThisWeek: [],
       season: { ...c.season, phase: "Regular" },
+      rngCursor: rng.getCursor(),
     };
     set({ career: persist(next) });
   },
@@ -590,6 +629,30 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       resources: { ...c.resources, draftStock: finalStock },
       ending,
     };
+    set({ career: persist(next) });
+  },
+
+  transferSchool: (schoolId) => {
+    const c = get().career;
+    if (!c || schoolId === c.schoolId) return;
+    const rng = rngFor(c.seed, c.rngCursor);
+    const overall = computeOverall(c.athlete.position, c.athlete.attributes);
+    const school = getSchool(schoolId);
+    const next: CareerState = {
+      ...c,
+      schoolId,
+      depthChart: initialDepthChart(overall, rng),
+      resources: applyDelta(c.resources, {
+        coachTrust: -10,
+        campusReputation: -10,
+        confidence: -5,
+      }),
+      rngCursor: rng.getCursor(),
+    };
+    toast({
+      title: "Transfer Complete",
+      description: `Welcome to ${school?.name ?? "your new program"}. You'll have to earn your spot again.`,
+    });
     set({ career: persist(next) });
   },
 }));

@@ -53,7 +53,7 @@ function opponentPool(
   return { opponents, rivalId: opponents[0]?.id ?? "" };
 }
 
-function initialDepthChart(overall: number, rng: Rng): DepthChart {
+export function initialDepthChart(overall: number, rng: Rng): DepthChart {
   const names = [
     "Cole Bishop",
     "Zane Portis",
