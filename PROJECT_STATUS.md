@@ -18,6 +18,17 @@ season/week advancement → save persistence across a page reload.
 - 12 fictional schools / 3 conferences, 24 sponsors, 46 story events across
   17 categories, 5 playable positions — all verified via
   `npx tsx scripts/seed.ts`.
+- Deployed to production (`campus-legend.vercel.app`, GitHub-connected —
+  every push to `main` auto-deploys) with a real Supabase project wired up.
+  Cloud saves are fully live: sign-up/sign-in, the `profiles`/`careers`
+  schema + RLS, and the actual save/load sync were all verified against the
+  running production site (not just locally). The sync logic was a
+  follow-up fix — the initial deployment had auth and the database wired
+  but no code path ever called `upsertCloudCareer`/`loadCloudCareer`, so
+  cloud saves _looked_ configured but games were still only saved to
+  `localStorage`. `career-store.ts` now tracks the Supabase session and
+  syncs every save in the background when signed in, with an automatic
+  guest→account handoff on first sign-in.
 
 ## How this pass was carried out
 
