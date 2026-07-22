@@ -9,7 +9,7 @@
 - [x] 84 unit tests across all engine modules
 - [x] Supabase schema + RLS (`supabase/migrations/0001_init.sql`)
 - [x] Local + cloud save layers with Zod validation
-- [x] Content: 15 schools / 3 conferences, 24 sponsors, 46 story events,
+- [x] Content: 12 schools / 3 conferences, 24 sponsors, 46 story events,
       courses, news templates, demo career
 
 ## This pass (UI build-out)
@@ -23,30 +23,30 @@
 - [x] Weekly planner
 - [x] Wire academics exam engine into `advanceWeek`
 - [x] `transferSchool` store action
-- [ ] Training center page
-- [ ] Academic center page
-- [ ] Depth chart page
-- [ ] Relationships page
-- [ ] Schedule + standings page
-- [ ] Game preview / game-day decisions / game recap
-- [ ] Sponsorship marketplace + active deals page
-- [ ] Career stats charts (Recharts)
-- [ ] Awards & achievements page
-- [ ] News feed page
-- [ ] Settings / save management page
-- [ ] Season recap page
-- [ ] Offseason page
-- [ ] Transfer decision page
-- [ ] Draft prep + combine page
-- [ ] Career ending page
-- [ ] Shareable career summary page
+- [x] Training center page
+- [x] Academic center page
+- [x] Depth chart page
+- [x] Relationships page
+- [x] Schedule + standings page
+- [x] Game preview / game-day decisions / game recap
+- [x] Sponsorship marketplace + active deals page
+- [x] Career stats charts (Recharts)
+- [x] Awards & achievements page
+- [x] News feed page
+- [x] Settings / save management page
+- [x] Season recap page
+- [x] Offseason page
+- [x] Transfer decision page
+- [x] Draft prep + combine page
+- [x] Career ending page
+- [x] Shareable career summary page
+- [x] GitHub Actions CI (lint, typecheck, test, build) — pre-existing, verified
+- [x] README (features, architecture, setup, deployment, mermaid diagrams)
+- [x] Full `pnpm build` verification — all 24 routes prerender successfully
 - [ ] Component tests (athlete creation, weekly actions, resource display,
       story events, sponsorship cards, game recap, career summary)
 - [ ] Playwright e2e: guest career → athlete → school → weekly actions →
       simulate game → review → save/reload
-- [ ] GitHub Actions CI (lint, typecheck, test, build)
-- [ ] README (features, architecture, setup, deployment, mermaid diagrams)
-- [ ] Full `pnpm build` verification
 - [ ] Accessibility pass (keyboard nav, focus states, aria-live announcements)
 - [ ] Remove dead code / unused deps
 - [ ] Final manual click-through of every required page on mobile + desktop

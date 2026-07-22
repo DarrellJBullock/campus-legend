@@ -94,14 +94,14 @@ export default function SettingsPage() {
                     className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-3"
                   >
                     <div className="text-sm">
-                      <p className="font-medium">
+                      <div className="flex items-center font-medium">
                         {save.name}
                         {save.id === career?.id ? (
                           <Badge variant="stadium" className="ml-2">
                             Active
                           </Badge>
                         ) : null}
-                      </p>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {school?.name ?? save.schoolId} · Season {save.season} ·
                         Updated {new Date(save.updatedAt).toLocaleString()}

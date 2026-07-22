@@ -81,7 +81,9 @@ export function initialDepthChart(overall: number, rng: Rng): DepthChart {
 
 function initialAcademics(input: AthleteCreationInput): AcademicTerm {
   const major = coursesForDepartment(input.academicStrength);
-  const gened = generalCourses();
+  const gened = generalCourses().filter(
+    (c) => !major.some((m) => m.id === c.id),
+  );
   const courses = [...major.slice(0, 3), ...gened.slice(0, 1)];
   return {
     season: 1,
